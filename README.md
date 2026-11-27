@@ -1,5 +1,12 @@
 # 校园学生体检与健康档案管理系统
 
+![Java](https://img.shields.io/badge/Java-17-orange)
+![Spring Boot](https://img.shields.io/badge/Spring%20Boot-4.1.0-brightgreen)
+![Vue](https://img.shields.io/badge/Vue-3.5-4FC08D)
+![MySQL](https://img.shields.io/badge/MySQL-8.0-4479A1)
+![Spring AI](https://img.shields.io/badge/Spring%20AI-2.0.0-6DB33F)
+![License](https://img.shields.io/badge/License-MIT-blue)
+
 基于若依（RuoYi-Vue）二次开发的校园健康管理平台，面向高校校医院与学工部门，覆盖 **学生档案 → 体检批次 → 体检登记 → 健康档案 → AI 健康评估 → 预约管理** 的完整业务闭环。
 
 > 本项目为课程设计 / 团队协作项目，在若依开源框架基础上完成了健康管理业务模块的设计与开发。

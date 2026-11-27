@@ -1,0 +1,161 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.health.mapper.ExamRecordMapper">
+    
+    <resultMap type="ExamRecord" id="ExamRecordResult">
+        <result property="id"    column="id"    />
+        <result property="studentId"    column="student_id"    />
+        <result property="batchId"    column="batch_id"    />
+        <result property="examDate"    column="exam_date"    />
+        <result property="height"    column="height"    />
+        <result property="weight"    column="weight"    />
+        <result property="bmi"    column="bmi"    />
+        <result property="bmiLevel"    column="bmi_level"    />
+        <result property="systolicPressure"    column="systolic_pressure"    />
+        <result property="diastolicPressure"    column="diastolic_pressure"    />
+        <result property="heartRate"    column="heart_rate"    />
+        <result property="visionLeft"    column="vision_left"    />
+        <result property="visionRight"    column="vision_right"    />
+        <result property="abnormalFlag"    column="abnormal_flag"    />
+        <result property="recordStatus"    column="record_status"    />
+        <result property="conclusion"    column="conclusion"    />
+        <result property="examinerId"    column="examiner_id"    />
+        <result property="examinerName"    column="examiner_name"    />
+        <result property="studentName"    column="student_name"    />
+        <result property="batchName"    column="batch_name"    />
+        <result property="createBy"    column="create_by"    />
+        <result property="createTime"    column="create_time"    />
+        <result property="updateBy"    column="update_by"    />
+        <result property="updateTime"    column="update_time"    />
+        <result property="remark"    column="remark"    />
+    </resultMap>
+
+    <sql id="selectExamRecordVo">
+        select id, student_id, batch_id, exam_date, height, weight, bmi, bmi_level, systolic_pressure, diastolic_pressure, heart_rate, vision_left, vision_right, abnormal_flag, record_status, conclusion, examiner_id, create_by, create_time, update_by, update_time, remark from ch_exam_record
+    </sql>
+
+    <select id="selectExamRecordList" parameterType="ExamRecord" resultMap="ExamRecordResult">
+        select r.id, r.student_id, r.batch_id, r.exam_date, r.height, r.weight, r.bmi, r.bmi_level,
+               r.systolic_pressure, r.diastolic_pressure, r.heart_rate, r.vision_left, r.vision_right,
+               r.abnormal_flag, r.record_status, r.conclusion, r.examiner_id,
+               r.create_by, r.create_time, r.update_by, r.update_time, r.remark,
+               s.student_name, b.batch_name, u.nick_name as examiner_name
+        from ch_exam_record r
+        left join ch_student s on s.id = r.student_id
+        left join ch_exam_batch b on b.id = r.batch_id
+        left join sys_user u on u.user_id = r.examiner_id
+        <where>
+            <if test="studentId != null "> and r.student_id = #{studentId}</if>
+            <if test="batchId != null "> and r.batch_id = #{batchId}</if>
+            <if test="examDate != null "> and r.exam_date = #{examDate}</if>
+            <!-- 异常指标管理页用它筛出 abnormal_flag = 1 的记录 -->
+            <if test="abnormalFlag != null  and abnormalFlag != ''"> and r.abnormal_flag = #{abnormalFlag}</if>
+            <!-- 历史体检记录页按学生姓名模糊查 -->
+            <if test="studentName != null  and studentName != ''"> and s.student_name like concat('%', #{studentName}, '%')</if>
+            <!-- BMI 等级筛选（健康统计页按等级下钻用）：不写这条条件的话，传 bmiLevel 会被静默忽略 -->
+            <if test="bmiLevel != null  and bmiLevel != ''"> and r.bmi_level = #{bmiLevel}</if>
+            <if test="recordStatus != null  and recordStatus != ''"> and r.record_status = #{recordStatus}</if>
+            <!-- 按体检人员筛：校医只关心自己录的那批 -->
+            <if test="examinerId != null "> and r.examiner_id = #{examinerId}</if>
+            <!-- 数据权限：辅导员只看得到本班学生的体检记录 -->
+            <if test="params.dataScope != null and params.dataScope != ''">${params.dataScope}</if>
+        </where>
+        order by r.id desc
+    </select>
+    
+    <select id="selectExamRecordById" parameterType="Long" resultMap="ExamRecordResult">
+        <include refid="selectExamRecordVo"/>
+        where id = #{id}
+    </select>
+
+    <insert id="insertExamRecord" parameterType="ExamRecord" useGeneratedKeys="true" keyProperty="id">
+        insert into ch_exam_record
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="studentId != null">student_id,</if>
+            <if test="batchId != null">batch_id,</if>
+            <if test="examDate != null">exam_date,</if>
+            <if test="height != null">height,</if>
+            <if test="weight != null">weight,</if>
+            <if test="bmi != null">bmi,</if>
+            <if test="bmiLevel != null">bmi_level,</if>
+            <if test="systolicPressure != null">systolic_pressure,</if>
+            <if test="diastolicPressure != null">diastolic_pressure,</if>
+            <if test="heartRate != null">heart_rate,</if>
+            <if test="visionLeft != null">vision_left,</if>
+            <if test="visionRight != null">vision_right,</if>
+            <if test="abnormalFlag != null">abnormal_flag,</if>
+            <if test="recordStatus != null">record_status,</if>
+            <if test="conclusion != null">conclusion,</if>
+            <if test="examinerId != null">examiner_id,</if>
+            <if test="createBy != null">create_by,</if>
+            <if test="createTime != null">create_time,</if>
+            <if test="updateBy != null">update_by,</if>
+            <if test="updateTime != null">update_time,</if>
+            <if test="remark != null">remark,</if>
+         </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="studentId != null">#{studentId},</if>
+            <if test="batchId != null">#{batchId},</if>
+            <if test="examDate != null">#{examDate},</if>
+            <if test="height != null">#{height},</if>
+            <if test="weight != null">#{weight},</if>
+            <if test="bmi != null">#{bmi},</if>
+            <if test="bmiLevel != null">#{bmiLevel},</if>
+            <if test="systolicPressure != null">#{systolicPressure},</if>
+            <if test="diastolicPressure != null">#{diastolicPressure},</if>
+            <if test="heartRate != null">#{heartRate},</if>
+            <if test="visionLeft != null">#{visionLeft},</if>
+            <if test="visionRight != null">#{visionRight},</if>
+            <if test="abnormalFlag != null">#{abnormalFlag},</if>
+            <if test="recordStatus != null">#{recordStatus},</if>
+            <if test="conclusion != null">#{conclusion},</if>
+            <if test="examinerId != null">#{examinerId},</if>
+            <if test="createBy != null">#{createBy},</if>
+            <if test="createTime != null">#{createTime},</if>
+            <if test="updateBy != null">#{updateBy},</if>
+            <if test="updateTime != null">#{updateTime},</if>
+            <if test="remark != null">#{remark},</if>
+         </trim>
+    </insert>
+
+    <update id="updateExamRecord" parameterType="ExamRecord">
+        update ch_exam_record
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="studentId != null">student_id = #{studentId},</if>
+            <if test="batchId != null">batch_id = #{batchId},</if>
+            <if test="examDate != null">exam_date = #{examDate},</if>
+            <if test="height != null">height = #{height},</if>
+            <if test="weight != null">weight = #{weight},</if>
+            <if test="bmi != null">bmi = #{bmi},</if>
+            <if test="bmiLevel != null">bmi_level = #{bmiLevel},</if>
+            <if test="systolicPressure != null">systolic_pressure = #{systolicPressure},</if>
+            <if test="diastolicPressure != null">diastolic_pressure = #{diastolicPressure},</if>
+            <if test="heartRate != null">heart_rate = #{heartRate},</if>
+            <if test="visionLeft != null">vision_left = #{visionLeft},</if>
+            <if test="visionRight != null">vision_right = #{visionRight},</if>
+            <if test="abnormalFlag != null">abnormal_flag = #{abnormalFlag},</if>
+            <if test="recordStatus != null">record_status = #{recordStatus},</if>
+            <if test="conclusion != null">conclusion = #{conclusion},</if>
+            <if test="examinerId != null">examiner_id = #{examinerId},</if>
+            <if test="createBy != null">create_by = #{createBy},</if>
+            <if test="createTime != null">create_time = #{createTime},</if>
+            <if test="updateBy != null">update_by = #{updateBy},</if>
+            <if test="updateTime != null">update_time = #{updateTime},</if>
+            <if test="remark != null">remark = #{remark},</if>
+        </trim>
+        where id = #{id}
+    </update>
+
+    <delete id="deleteExamRecordById" parameterType="Long">
+        delete from ch_exam_record where id = #{id}
+    </delete>
+
+    <delete id="deleteExamRecordByIds" parameterType="String">
+        delete from ch_exam_record where id in 
+        <foreach item="id" collection="array" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </delete>
+</mapper>

@@ -1,0 +1,134 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.health.mapper.AiAssessmentMapper">
+
+    <resultMap type="AiAssessment" id="AiAssessmentResult">
+        <result property="id"                 column="id"                 />
+        <result property="studentId"          column="student_id"         />
+        <result property="examRecordId"       column="exam_record_id"     />
+        <result property="assessStatus"       column="assess_status"       />
+        <result property="riskLevel"          column="risk_level"         />
+        <result property="assessmentResult"   column="assessment_result"  />
+        <result property="abnormalItems"      column="abnormal_items"     />
+        <result property="suggestions"        column="suggestions"        />
+        <result property="modelName"          column="model_name"         />
+        <result property="createBy"           column="create_by"          />
+        <result property="createTime"         column="create_time"        />
+        <result property="updateBy"           column="update_by"          />
+        <result property="updateTime"         column="update_time"        />
+        <result property="remark"             column="remark"             />
+        <!-- join 展示字段 -->
+        <result property="studentNo"          column="student_no"         />
+        <result property="studentName"        column="student_name"       />
+        <result property="examDate"           column="exam_date"          />
+    </resultMap>
+
+    <sql id="selectAiAssessmentVo">
+        select a.id, a.student_id, a.exam_record_id, a.assess_status, a.risk_level, a.assessment_result,
+               a.abnormal_items, a.suggestions, a.model_name,
+               a.create_by, a.create_time, a.update_by, a.update_time, a.remark,
+               s.student_no, s.student_name, r.exam_date
+        from ch_ai_assessment a
+        <!-- 体检记录是任务的宿主：记录被删了，任务就是一条永远生成不出结果的死任务，
+             这里用 inner join 直接不查出来，避免列表里出现体检日期为空、点了就报错的行 -->
+        join ch_exam_record r on r.id = a.exam_record_id
+        left join ch_student s on s.id = a.student_id
+    </sql>
+
+    <select id="selectAiAssessmentList" parameterType="AiAssessment" resultMap="AiAssessmentResult">
+        <include refid="selectAiAssessmentVo"/>
+        <where>
+            <if test="studentId != null"> and a.student_id = #{studentId}</if>
+            <if test="examRecordId != null"> and a.exam_record_id = #{examRecordId}</if>
+            <if test="riskLevel != null and riskLevel != ''"> and a.risk_level = #{riskLevel}</if>
+            <if test="assessStatus != null and assessStatus != ''"> and a.assess_status = #{assessStatus}</if>
+            <if test="studentName != null and studentName != ''"> and s.student_name like concat('%', #{studentName}, '%')</if>
+            <if test="studentNo != null and studentNo != ''"> and s.student_no like concat('%', #{studentNo}, '%')</if>
+        </where>
+        order by a.id desc
+    </select>
+
+    <select id="selectAiAssessmentById" parameterType="Long" resultMap="AiAssessmentResult">
+        <include refid="selectAiAssessmentVo"/>
+        where a.id = #{id}
+    </select>
+
+    <select id="selectAiAssessmentByRecordId" parameterType="Long" resultMap="AiAssessmentResult">
+        <include refid="selectAiAssessmentVo"/>
+        where a.exam_record_id = #{examRecordId}
+        limit 1
+    </select>
+
+    <insert id="insertAiAssessment" parameterType="AiAssessment" useGeneratedKeys="true" keyProperty="id">
+        insert into ch_ai_assessment
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="studentId != null">student_id,</if>
+            <if test="examRecordId != null">exam_record_id,</if>
+            <if test="assessStatus != null">assess_status,</if>
+            <if test="riskLevel != null">risk_level,</if>
+            <if test="assessmentResult != null">assessment_result,</if>
+            <if test="abnormalItems != null">abnormal_items,</if>
+            <if test="suggestions != null">suggestions,</if>
+            <if test="modelName != null">model_name,</if>
+            <if test="createBy != null">create_by,</if>
+            <if test="createTime != null">create_time,</if>
+            <if test="remark != null">remark,</if>
+        </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="studentId != null">#{studentId},</if>
+            <if test="examRecordId != null">#{examRecordId},</if>
+            <if test="assessStatus != null">#{assessStatus},</if>
+            <if test="riskLevel != null">#{riskLevel},</if>
+            <if test="assessmentResult != null">#{assessmentResult},</if>
+            <if test="abnormalItems != null">#{abnormalItems},</if>
+            <if test="suggestions != null">#{suggestions},</if>
+            <if test="modelName != null">#{modelName},</if>
+            <if test="createBy != null">#{createBy},</if>
+            <if test="createTime != null">#{createTime},</if>
+            <if test="remark != null">#{remark},</if>
+        </trim>
+    </insert>
+
+    <update id="updateAiAssessment" parameterType="AiAssessment">
+        update ch_ai_assessment
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="studentId != null">student_id = #{studentId},</if>
+            <if test="examRecordId != null">exam_record_id = #{examRecordId},</if>
+            <if test="assessStatus != null">assess_status = #{assessStatus},</if>
+            <if test="riskLevel != null">risk_level = #{riskLevel},</if>
+            <if test="assessmentResult != null">assessment_result = #{assessmentResult},</if>
+            <if test="abnormalItems != null">abnormal_items = #{abnormalItems},</if>
+            <if test="suggestions != null">suggestions = #{suggestions},</if>
+            <if test="modelName != null">model_name = #{modelName},</if>
+            <if test="updateBy != null">update_by = #{updateBy},</if>
+            <if test="updateTime != null">update_time = #{updateTime},</if>
+            <if test="remark != null">remark = #{remark},</if>
+        </trim>
+        where id = #{id}
+    </update>
+
+    <!-- 只改状态：评估开始时置「评估中」、模型失败时回退「待评估」，不碰已有结果 -->
+    <update id="updateAssessStatus">
+        update ch_ai_assessment
+        set assess_status = #{status}, update_by = #{updateBy}, update_time = now()
+        where exam_record_id = #{examRecordId}
+    </update>
+
+    <delete id="deleteAiAssessmentById" parameterType="Long">
+        delete from ch_ai_assessment where id = #{id}
+    </delete>
+
+    <delete id="deleteAiAssessmentByIds" parameterType="String">
+        delete from ch_ai_assessment where id in 
+        <foreach item="id" collection="array" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </delete>
+
+    <delete id="deleteAiAssessmentByRecordId" parameterType="Long">
+        delete from ch_ai_assessment where exam_record_id = #{examRecordId}
+    </delete>
+
+</mapper>

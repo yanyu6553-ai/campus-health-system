@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.health.mapper.HealthArchiveMapper">
+
+    <resultMap type="HealthArchive" id="HealthArchiveResult">
+        <result property="id"             column="id"              />
+        <result property="studentId"      column="student_id"      />
+        <result property="totalExamCount" column="total_exam_count"/>
+        <result property="lastExamDate"   column="last_exam_date"  />
+        <result property="healthSummary"  column="health_summary"  />
+        <result property="archiveStatus"  column="archive_status"  />
+        <result property="createBy"       column="create_by"       />
+        <result property="createTime"     column="create_time"     />
+        <result property="updateBy"       column="update_by"       />
+        <result property="updateTime"     column="update_time"     />
+        <result property="remark"         column="remark"          />
+    </resultMap>
+
+    <select id="selectByStudentId" parameterType="Long" resultMap="HealthArchiveResult">
+        select id, student_id, total_exam_count, last_exam_date, health_summary, archive_status,
+               create_by, create_time, update_by, update_time, remark
+        from ch_health_archive
+        where student_id = #{studentId}
+    </select>
+
+    <!--
+        student_id 上有唯一索引：同一学生只会有一条档案。
+        ON DUPLICATE KEY UPDATE 把"先查再决定插还是改"压成一条语句，
+        两个人同时保存同一学生的体检记录也不会产生重复档案。
+    -->
+    <insert id="saveOrUpdate" parameterType="HealthArchive">
+        insert into ch_health_archive
+            (student_id, total_exam_count, last_exam_date, health_summary, archive_status, create_by, create_time, update_time)
+        values
+            (#{studentId}, #{totalExamCount}, #{lastExamDate}, #{healthSummary}, #{archiveStatus}, #{createBy}, now(), now())
+        on duplicate key update
+            total_exam_count = values(total_exam_count),
+            last_exam_date   = values(last_exam_date),
+            health_summary   = values(health_summary),
+            archive_status   = values(archive_status),
+            update_by        = #{updateBy},
+            update_time      = now()
+    </insert>
+
+</mapper>

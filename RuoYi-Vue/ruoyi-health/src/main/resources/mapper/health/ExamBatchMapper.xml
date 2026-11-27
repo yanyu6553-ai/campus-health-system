@@ -1,0 +1,145 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.health.mapper.ExamBatchMapper">
+    
+    <resultMap type="ExamBatch" id="ExamBatchResult">
+        <result property="id"    column="id"    />
+        <result property="batchName"    column="batch_name"    />
+        <result property="startTime"    column="start_time"    />
+        <result property="endTime"    column="end_time"    />
+        <result property="examDate"    column="exam_date"    />
+        <result property="location"    column="location"    />
+        <result property="capacity"    column="capacity"    />
+        <result property="bookedCount"    column="booked_count"    />
+        <result property="status"    column="status"    />
+        <result property="createBy"    column="create_by"    />
+        <result property="createTime"    column="create_time"    />
+        <result property="updateBy"    column="update_by"    />
+        <result property="updateTime"    column="update_time"    />
+        <result property="remark"    column="remark"    />
+    </resultMap>
+
+    <sql id="selectExamBatchVo">
+        select id, batch_name, start_time, end_time, exam_date, location, capacity, booked_count, status, create_by, create_time, update_by, update_time, remark from ch_exam_batch
+    </sql>
+
+    <select id="selectExamBatchList" parameterType="ExamBatch" resultMap="ExamBatchResult">
+        <include refid="selectExamBatchVo"/>
+        <where>  
+            <if test="batchName != null  and batchName != ''"> and batch_name like concat('%', #{batchName}, '%')</if>
+            <if test="examDate != null "> and exam_date = #{examDate}</if>
+            <if test="location != null  and location != ''"> and location = #{location}</if>
+            <if test="capacity != null "> and capacity = #{capacity}</if>
+            <if test="bookedCount != null "> and booked_count = #{bookedCount}</if>
+            <if test="status != null  and status != ''"> and status = #{status}</if>
+        </where>
+    </select>
+    
+    <select id="selectExamBatchById" parameterType="Long" resultMap="ExamBatchResult">
+        <include refid="selectExamBatchVo"/>
+        where id = #{id}
+    </select>
+
+    <!-- 新增/改名前的名称查重：精确匹配（列表查询里的 batchName 是模糊，别混用） -->
+    <select id="checkBatchNameUnique" resultMap="ExamBatchResult">
+        <include refid="selectExamBatchVo"/>
+        where batch_name = #{batchName}
+        limit 1
+    </select>
+
+    <insert id="insertExamBatch" parameterType="ExamBatch" useGeneratedKeys="true" keyProperty="id">
+        insert into ch_exam_batch
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="batchName != null and batchName != ''">batch_name,</if>
+            <if test="startTime != null">start_time,</if>
+            <if test="endTime != null">end_time,</if>
+            <if test="examDate != null">exam_date,</if>
+            <if test="location != null">location,</if>
+            <if test="capacity != null">capacity,</if>
+            <if test="status != null">status,</if>
+            <if test="createBy != null">create_by,</if>
+            <if test="createTime != null">create_time,</if>
+            <if test="updateBy != null">update_by,</if>
+            <if test="updateTime != null">update_time,</if>
+            <if test="remark != null">remark,</if>
+         </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="batchName != null and batchName != ''">#{batchName},</if>
+            <if test="startTime != null">#{startTime},</if>
+            <if test="endTime != null">#{endTime},</if>
+            <if test="examDate != null">#{examDate},</if>
+            <if test="location != null">#{location},</if>
+            <if test="capacity != null">#{capacity},</if>
+            <if test="status != null">#{status},</if>
+            <if test="createBy != null">#{createBy},</if>
+            <if test="createTime != null">#{createTime},</if>
+            <if test="updateBy != null">#{updateBy},</if>
+            <if test="updateTime != null">#{updateTime},</if>
+            <if test="remark != null">#{remark},</if>
+         </trim>
+    </insert>
+
+    <update id="updateExamBatch" parameterType="ExamBatch">
+        update ch_exam_batch
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="batchName != null and batchName != ''">batch_name = #{batchName},</if>
+            <if test="startTime != null">start_time = #{startTime},</if>
+            <if test="endTime != null">end_time = #{endTime},</if>
+            <if test="examDate != null">exam_date = #{examDate},</if>
+            <if test="location != null">location = #{location},</if>
+            <if test="capacity != null">capacity = #{capacity},</if>
+            <if test="status != null">status = #{status},</if>
+            <if test="createBy != null">create_by = #{createBy},</if>
+            <if test="createTime != null">create_time = #{createTime},</if>
+            <if test="updateBy != null">update_by = #{updateBy},</if>
+            <if test="updateTime != null">update_time = #{updateTime},</if>
+            <if test="remark != null">remark = #{remark},</if>
+        </trim>
+        where id = #{id}
+    </update>
+
+    <delete id="deleteExamBatchById" parameterType="Long">
+        delete from ch_exam_batch where id = #{id}
+    </delete>
+
+    <delete id="deleteExamBatchByIds" parameterType="String">
+        delete from ch_exam_batch where id in 
+        <foreach item="id" collection="array" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </delete>
+
+    <!--
+        防超卖的关键：把「判断够不够」和「占用一个」压进同一条 SQL。
+        数据库对同一行的 update 会加行锁，并发时后到的那条会看到别人已提交的新值，
+        booked_count < capacity 不成立就影响 0 行，业务层据此报「名额已满」。
+        如果改成先 select 判断、再 update，两个请求可能同时读到 4/5，然后都成功 → 超卖。
+    -->
+    <update id="incrementBookedCount" parameterType="Long">
+        update ch_exam_batch
+        set booked_count = booked_count + 1
+        where id = #{batchId}
+          and booked_count &lt; capacity
+    </update>
+
+    <!-- 取消预约时释放名额：booked_count > 0 兜底，避免出现负数 -->
+    <update id="decrementBookedCount" parameterType="Long">
+        update ch_exam_batch
+        set booked_count = booked_count - 1
+        where id = #{batchId}
+          and booked_count &gt; 0
+    </update>
+
+    <!--
+        体检日期过了就自动关窗：只动「预约中」的批次，已经是「已结束」的不重复处理。
+        用 exam_date &lt; curdate() 而不是 &lt;=，因为体检当天还在进行，不能提前关。
+    -->
+    <update id="closeExpiredBatches">
+        update ch_exam_batch
+        set status = '2'
+        where status = '1'
+          and exam_date &lt; curdate()
+    </update>
+</mapper>

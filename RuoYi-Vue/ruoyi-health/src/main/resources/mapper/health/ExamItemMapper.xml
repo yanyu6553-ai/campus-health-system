@@ -1,0 +1,135 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.health.mapper.ExamItemMapper">
+    
+    <resultMap type="ExamItem" id="ExamItemResult">
+        <result property="id"    column="id"    />
+        <result property="itemCode"    column="item_code"    />
+        <result property="itemName"    column="item_name"    />
+        <result property="category"    column="category"    />
+        <result property="unit"    column="unit"    />
+        <result property="fieldKey"    column="field_key"    />
+        <result property="referenceMin"    column="reference_min"    />
+        <result property="referenceMax"    column="reference_max"    />
+        <result property="abnormalRule"    column="abnormal_rule"    />
+        <result property="description"    column="description"    />
+        <result property="status"    column="status"    />
+        <result property="createBy"    column="create_by"    />
+        <result property="createTime"    column="create_time"    />
+        <result property="updateBy"    column="update_by"    />
+        <result property="updateTime"    column="update_time"    />
+        <result property="remark"    column="remark"    />
+    </resultMap>
+
+    <sql id="selectExamItemVo">
+        select id, item_code, item_name, category, unit, field_key, reference_min, reference_max, abnormal_rule, description, status, create_by, create_time, update_by, update_time, remark from ch_exam_item
+    </sql>
+
+    <select id="selectExamItemList" parameterType="ExamItem" resultMap="ExamItemResult">
+        <include refid="selectExamItemVo"/>
+        <where>  
+            <if test="itemCode != null  and itemCode != ''"> and item_code like concat('%', #{itemCode}, '%')</if>
+            <if test="itemName != null  and itemName != ''"> and item_name like concat('%', #{itemName}, '%')</if>
+            <if test="category != null  and category != ''"> and category = #{category}</if>
+            <if test="fieldKey != null  and fieldKey != ''"> and field_key = #{fieldKey}</if>
+            <if test="abnormalRule != null  and abnormalRule != ''"> and abnormal_rule = #{abnormalRule}</if>
+            <if test="status != null  and status != ''"> and status = #{status}</if>
+        </where>
+        order by category, id
+    </select>
+    
+    <select id="selectExamItemById" parameterType="Long" resultMap="ExamItemResult">
+        <include refid="selectExamItemVo"/>
+        where id = #{id}
+    </select>
+
+    <select id="selectExamItemByCode" parameterType="String" resultMap="ExamItemResult">
+        <include refid="selectExamItemVo"/>
+        where item_code = #{itemCode}
+    </select>
+
+    <!--
+        异常判定只认「启用」的项目：停用一个项目 = 这个指标不再参与判定。
+        field_key 为空的记录说明它只是个展示项，没有对应字段，判定时直接跳过。
+    -->
+    <select id="selectEnabledExamItemList" resultMap="ExamItemResult">
+        <include refid="selectExamItemVo"/>
+        where status = '0'
+          and field_key is not null
+          and field_key != ''
+        order by category, id
+    </select>
+
+    <insert id="insertExamItem" parameterType="ExamItem" useGeneratedKeys="true" keyProperty="id">
+        insert into ch_exam_item
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="itemCode != null and itemCode != ''">item_code,</if>
+            <if test="itemName != null and itemName != ''">item_name,</if>
+            <if test="category != null">category,</if>
+            <if test="unit != null">unit,</if>
+            <if test="fieldKey != null">field_key,</if>
+            <if test="referenceMin != null">reference_min,</if>
+            <if test="referenceMax != null">reference_max,</if>
+            <if test="abnormalRule != null">abnormal_rule,</if>
+            <if test="description != null">description,</if>
+            <if test="status != null">status,</if>
+            <if test="createBy != null">create_by,</if>
+            <if test="createTime != null">create_time,</if>
+            <if test="updateBy != null">update_by,</if>
+            <if test="updateTime != null">update_time,</if>
+            <if test="remark != null">remark,</if>
+         </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="itemCode != null and itemCode != ''">#{itemCode},</if>
+            <if test="itemName != null and itemName != ''">#{itemName},</if>
+            <if test="category != null">#{category},</if>
+            <if test="unit != null">#{unit},</if>
+            <if test="fieldKey != null">#{fieldKey},</if>
+            <if test="referenceMin != null">#{referenceMin},</if>
+            <if test="referenceMax != null">#{referenceMax},</if>
+            <if test="abnormalRule != null">#{abnormalRule},</if>
+            <if test="description != null">#{description},</if>
+            <if test="status != null">#{status},</if>
+            <if test="createBy != null">#{createBy},</if>
+            <if test="createTime != null">#{createTime},</if>
+            <if test="updateBy != null">#{updateBy},</if>
+            <if test="updateTime != null">#{updateTime},</if>
+            <if test="remark != null">#{remark},</if>
+         </trim>
+    </insert>
+
+    <update id="updateExamItem" parameterType="ExamItem">
+        update ch_exam_item
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="itemCode != null and itemCode != ''">item_code = #{itemCode},</if>
+            <if test="itemName != null and itemName != ''">item_name = #{itemName},</if>
+            <if test="category != null">category = #{category},</if>
+            <if test="unit != null">unit = #{unit},</if>
+            <if test="fieldKey != null">field_key = #{fieldKey},</if>
+            <if test="referenceMin != null">reference_min = #{referenceMin},</if>
+            <if test="referenceMax != null">reference_max = #{referenceMax},</if>
+            <if test="abnormalRule != null">abnormal_rule = #{abnormalRule},</if>
+            <if test="description != null">description = #{description},</if>
+            <if test="status != null">status = #{status},</if>
+            <if test="createBy != null">create_by = #{createBy},</if>
+            <if test="createTime != null">create_time = #{createTime},</if>
+            <if test="updateBy != null">update_by = #{updateBy},</if>
+            <if test="updateTime != null">update_time = #{updateTime},</if>
+            <if test="remark != null">remark = #{remark},</if>
+        </trim>
+        where id = #{id}
+    </update>
+
+    <delete id="deleteExamItemById" parameterType="Long">
+        delete from ch_exam_item where id = #{id}
+    </delete>
+
+    <delete id="deleteExamItemByIds" parameterType="String">
+        delete from ch_exam_item where id in 
+        <foreach item="id" collection="array" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </delete>
+</mapper>

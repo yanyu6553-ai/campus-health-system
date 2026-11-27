@@ -1,0 +1,168 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.health.mapper.StudentMapper">
+    
+    <resultMap type="Student" id="StudentResult">
+        <result property="id"    column="id"    />
+        <result property="userId"    column="user_id"    />
+        <result property="studentNo"    column="student_no"    />
+        <result property="studentName"    column="student_name"    />
+        <result property="gender"    column="gender"    />
+        <result property="birthday"    column="birthday"    />
+        <result property="college"    column="college"    />
+        <result property="major"    column="major"    />
+        <result property="className"    column="class_name"    />
+        <result property="deptId"    column="dept_id"    />
+        <result property="phone"    column="phone"    />
+        <result property="enrollYear"    column="enroll_year"    />
+        <result property="status"    column="status"    />
+        <result property="createBy"    column="create_by"    />
+        <result property="createTime"    column="create_time"    />
+        <result property="updateBy"    column="update_by"    />
+        <result property="updateTime"    column="update_time"    />
+        <result property="remark"    column="remark"    />
+    </resultMap>
+
+    <sql id="selectStudentVo">
+        select id, user_id, student_no, student_name, gender, birthday, college, major, class_name, dept_id, phone, enroll_year, status, create_by, create_time, update_by, update_time, remark from ch_student
+    </sql>
+
+    <!-- 列表用带别名的版本：数据权限拼出来的条件是 s.dept_id = xxx，必须有别名才能对上 -->
+    <sql id="selectStudentVoAlias">
+        select s.id, s.user_id, s.student_no, s.student_name, s.gender, s.birthday, s.college, s.major,
+               s.class_name, s.dept_id, s.phone, s.enroll_year, s.status,
+               s.create_by, s.create_time, s.update_by, s.update_time, s.remark
+        from ch_student s
+    </sql>
+
+    <!--
+        查询条件的匹配方式约定（与搜索表单的输入习惯一致）：
+        - 学号 studentNo 用精确匹配：它是业务主键，新增/导入前的学号查重也复用这条查询，
+          改成模糊会让"20260001"误命中"202600011"这类前缀学号；
+        - 姓名/班级沿用模糊；
+        - 学院/专业/电话改用模糊：用户习惯输入"软件"就查"软件学院"、输手机尾号找人，
+          精确匹配会让人误以为查询功能失效。
+        列表查询追加 ${params.dataScope}：
+        @DataScope 切面会根据当前账号的角色数据范围（全部/本部门/本部门及以下/仅本人）
+        生成一段 and 条件塞进 params，这里直接拼进 SQL。
+        管理员、校医是"全部数据"，切面生成空串，等于不过滤；
+        辅导员是"本部门"，只看得到自己带的班。
+    -->
+    <select id="selectStudentList" parameterType="Student" resultMap="StudentResult">
+        <include refid="selectStudentVoAlias"/>
+        <where>
+            <if test="studentNo != null  and studentNo != ''"> and s.student_no = #{studentNo}</if>
+            <if test="studentName != null  and studentName != ''"> and s.student_name like concat('%', #{studentName}, '%')</if>
+            <if test="college != null  and college != ''"> and s.college like concat('%', #{college}, '%')</if>
+            <if test="major != null  and major != ''"> and s.major like concat('%', #{major}, '%')</if>
+            <if test="className != null  and className != ''"> and s.class_name like concat('%', #{className}, '%')</if>
+            <if test="phone != null  and phone != ''"> and s.phone like concat('%', #{phone}, '%')</if>
+            <if test="status != null  and status != ''"> and s.status = #{status}</if>
+            <if test="params.dataScope != null and params.dataScope != ''">${params.dataScope}</if>
+        </where>
+        order by s.student_no
+    </select>
+    
+    <select id="selectStudentById" parameterType="Long" resultMap="StudentResult">
+        <include refid="selectStudentVo"/>
+        where id = #{id}
+    </select>
+
+    <!-- 按系统账号反查学生档案：学生端"我是谁"的唯一依据 -->
+    <select id="selectStudentByUserId" parameterType="Long" resultMap="StudentResult">
+        <include refid="selectStudentVo"/>
+        where user_id = #{userId} limit 1
+    </select>
+
+    <!-- 班级 -> 部门：只认「班级层」部门——即父部门不是根节点的第三层部门（如 软件学院/软件2401）。
+         校医院、学院这类第二层部门与班级同名时会被这里排除，避免学生挂到上级部门上。
+         用父部门判断而不是写死 dept_id 区间（120~124）：后台新增班级部门（自动分配更大的 id）同样能命中。 -->
+    <select id="selectDeptIdByClassName" parameterType="String" resultType="java.lang.Long">
+        select c.dept_id
+        from sys_dept c
+        join sys_dept p on p.dept_id = c.parent_id and p.del_flag = '0' and p.parent_id &lt;&gt; 0
+        where c.dept_name = #{className}
+          and c.del_flag = '0'
+        order by c.dept_id
+        limit 1
+    </select>
+
+    <insert id="insertStudent" parameterType="Student" useGeneratedKeys="true" keyProperty="id">
+        insert into ch_student
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="userId != null">user_id,</if>
+            <if test="studentNo != null and studentNo != ''">student_no,</if>
+            <if test="studentName != null and studentName != ''">student_name,</if>
+            <if test="gender != null">gender,</if>
+            <if test="birthday != null">birthday,</if>
+            <if test="college != null">college,</if>
+            <if test="major != null">major,</if>
+            <if test="className != null">class_name,</if>
+            <if test="deptId != null">dept_id,</if>
+            <if test="phone != null">phone,</if>
+            <if test="enrollYear != null">enroll_year,</if>
+            <if test="status != null">status,</if>
+            <if test="createBy != null">create_by,</if>
+            <if test="createTime != null">create_time,</if>
+            <if test="updateBy != null">update_by,</if>
+            <if test="updateTime != null">update_time,</if>
+            <if test="remark != null">remark,</if>
+         </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="userId != null">#{userId},</if>
+            <if test="studentNo != null and studentNo != ''">#{studentNo},</if>
+            <if test="studentName != null and studentName != ''">#{studentName},</if>
+            <if test="gender != null">#{gender},</if>
+            <if test="birthday != null">#{birthday},</if>
+            <if test="college != null">#{college},</if>
+            <if test="major != null">#{major},</if>
+            <if test="className != null">#{className},</if>
+            <if test="deptId != null">#{deptId},</if>
+            <if test="phone != null">#{phone},</if>
+            <if test="enrollYear != null">#{enrollYear},</if>
+            <if test="status != null">#{status},</if>
+            <if test="createBy != null">#{createBy},</if>
+            <if test="createTime != null">#{createTime},</if>
+            <if test="updateBy != null">#{updateBy},</if>
+            <if test="updateTime != null">#{updateTime},</if>
+            <if test="remark != null">#{remark},</if>
+         </trim>
+    </insert>
+
+    <update id="updateStudent" parameterType="Student">
+        update ch_student
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="userId != null">user_id = #{userId},</if>
+            <if test="studentNo != null and studentNo != ''">student_no = #{studentNo},</if>
+            <if test="studentName != null and studentName != ''">student_name = #{studentName},</if>
+            <if test="gender != null">gender = #{gender},</if>
+            <if test="birthday != null">birthday = #{birthday},</if>
+            <if test="college != null">college = #{college},</if>
+            <if test="major != null">major = #{major},</if>
+            <if test="className != null">class_name = #{className},</if>
+            <if test="deptId != null">dept_id = #{deptId},</if>
+            <if test="phone != null">phone = #{phone},</if>
+            <if test="enrollYear != null">enroll_year = #{enrollYear},</if>
+            <if test="status != null">status = #{status},</if>
+            <if test="createBy != null">create_by = #{createBy},</if>
+            <if test="createTime != null">create_time = #{createTime},</if>
+            <if test="updateBy != null">update_by = #{updateBy},</if>
+            <if test="updateTime != null">update_time = #{updateTime},</if>
+            <if test="remark != null">remark = #{remark},</if>
+        </trim>
+        where id = #{id}
+    </update>
+
+    <delete id="deleteStudentById" parameterType="Long">
+        delete from ch_student where id = #{id}
+    </delete>
+
+    <delete id="deleteStudentByIds" parameterType="String">
+        delete from ch_student where id in 
+        <foreach item="id" collection="array" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </delete>
+</mapper>

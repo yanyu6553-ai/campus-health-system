@@ -1,0 +1,172 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.health.mapper.AppointmentMapper">
+    
+    <resultMap type="Appointment" id="AppointmentResult">
+        <result property="id"    column="id"    />
+        <result property="studentId"    column="student_id"    />
+        <result property="batchId"    column="batch_id"    />
+        <result property="appointmentTime"    column="appointment_time"    />
+        <result property="status"    column="status"    />
+        <result property="auditUser"    column="audit_user"    />
+        <result property="auditTime"    column="audit_time"    />
+        <result property="auditRemark"    column="audit_remark"    />
+        <result property="createBy"    column="create_by"    />
+        <result property="createTime"    column="create_time"    />
+        <result property="updateBy"    column="update_by"    />
+        <result property="updateTime"    column="update_time"    />
+        <result property="remark"    column="remark"    />
+        <!-- 联表带出来的展示字段 -->
+        <result property="studentNo"    column="student_no"    />
+        <result property="studentName"    column="student_name"    />
+        <result property="auditUserName"    column="audit_user_name"    />
+        <result property="batchName"    column="batch_name"    />
+        <result property="examDate"    column="exam_date"    />
+        <result property="batchCapacity"    column="batch_capacity"    />
+        <result property="batchBooked"    column="batch_booked"    />
+    </resultMap>
+
+    <!--
+        列表要显示学生姓名和批次名称，光靠 student_id 老师看不懂，所以 left join 两张表。
+        用 left join 而不是 inner join：万一学生或批次被删了，预约记录本身还能查出来。
+
+        audit_user 存的是 sys_user.user_id（文档表4 要求"审核人员"），
+        展示时再 join sys_user 取昵称；账号被删也不会让整条预约查不出来（left join）。
+    -->
+    <sql id="selectAppointmentVo">
+        select a.id, a.student_id, a.batch_id, a.appointment_time, a.status, a.audit_user, a.audit_time,
+               a.audit_remark, a.create_by, a.create_time, a.update_by, a.update_time, a.remark,
+               s.student_no, s.student_name,
+               u.nick_name as audit_user_name,
+               b.batch_name, b.exam_date,
+               b.capacity as batch_capacity, b.booked_count as batch_booked
+        from ch_appointment a
+        left join ch_student s on s.id = a.student_id
+        left join ch_exam_batch b on b.id = a.batch_id
+        left join sys_user u on u.user_id = a.audit_user
+    </sql>
+
+    <select id="selectAppointmentList" parameterType="Appointment" resultMap="AppointmentResult">
+        <include refid="selectAppointmentVo"/>
+        <where>  
+            <if test="studentId != null "> and a.student_id = #{studentId}</if>
+            <if test="batchId != null "> and a.batch_id = #{batchId}</if>
+            <if test="appointmentTime != null "> and a.appointment_time = #{appointmentTime}</if>
+            <if test="status != null  and status != ''"> and a.status = #{status}</if>
+            <if test="auditUser != null "> and a.audit_user = #{auditUser}</if>
+            <if test="auditTime != null "> and a.audit_time = #{auditTime}</if>
+            <if test="auditRemark != null  and auditRemark != ''"> and a.audit_remark = #{auditRemark}</if>
+            <if test="studentName != null  and studentName != ''"> and s.student_name like concat('%', #{studentName}, '%')</if>
+            <!-- 数据权限：辅导员只看得到本班学生的预约 -->
+            <if test="params.dataScope != null and params.dataScope != ''">${params.dataScope}</if>
+        </where>
+        order by a.id desc
+    </select>
+    
+    <select id="selectAppointmentById" parameterType="Long" resultMap="AppointmentResult">
+        <include refid="selectAppointmentVo"/>
+        where a.id = #{id}
+    </select>
+
+    <insert id="insertAppointment" parameterType="Appointment" useGeneratedKeys="true" keyProperty="id">
+        insert into ch_appointment
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="studentId != null">student_id,</if>
+            <if test="batchId != null">batch_id,</if>
+            <if test="appointmentTime != null">appointment_time,</if>
+            <if test="status != null">status,</if>
+            <if test="auditUser != null">audit_user,</if>
+            <if test="auditTime != null">audit_time,</if>
+            <if test="auditRemark != null">audit_remark,</if>
+            <if test="createBy != null">create_by,</if>
+            <if test="createTime != null">create_time,</if>
+            <if test="updateBy != null">update_by,</if>
+            <if test="updateTime != null">update_time,</if>
+            <if test="remark != null">remark,</if>
+         </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="studentId != null">#{studentId},</if>
+            <if test="batchId != null">#{batchId},</if>
+            <if test="appointmentTime != null">#{appointmentTime},</if>
+            <if test="status != null">#{status},</if>
+            <if test="auditUser != null">#{auditUser},</if>
+            <if test="auditTime != null">#{auditTime},</if>
+            <if test="auditRemark != null">#{auditRemark},</if>
+            <if test="createBy != null">#{createBy},</if>
+            <if test="createTime != null">#{createTime},</if>
+            <if test="updateBy != null">#{updateBy},</if>
+            <if test="updateTime != null">#{updateTime},</if>
+            <if test="remark != null">#{remark},</if>
+         </trim>
+    </insert>
+
+    <update id="updateAppointment" parameterType="Appointment">
+        update ch_appointment
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="studentId != null">student_id = #{studentId},</if>
+            <if test="batchId != null">batch_id = #{batchId},</if>
+            <if test="appointmentTime != null">appointment_time = #{appointmentTime},</if>
+            <if test="status != null">status = #{status},</if>
+            <if test="auditUser != null">audit_user = #{auditUser},</if>
+            <if test="auditTime != null">audit_time = #{auditTime},</if>
+            <if test="auditRemark != null">audit_remark = #{auditRemark},</if>
+            <if test="createBy != null">create_by = #{createBy},</if>
+            <if test="createTime != null">create_time = #{createTime},</if>
+            <if test="updateBy != null">update_by = #{updateBy},</if>
+            <if test="updateTime != null">update_time = #{updateTime},</if>
+            <if test="remark != null">remark = #{remark},</if>
+        </trim>
+        where id = #{id}
+    </update>
+
+    <delete id="deleteAppointmentById" parameterType="Long">
+        delete from ch_appointment where id = #{id}
+    </delete>
+
+    <!--
+        取消预约：只有「待审核(0)」「已预约(1)」能被取消。
+        把状态条件写进 where，而不是先查再改 —— 这样并发点两次只有一次能成功，
+        也天然防住了「已完成的记录被取消」。
+    -->
+    <update id="cancelAppointment" parameterType="Appointment">
+        update ch_appointment
+        set status      = '3',
+            update_by   = #{updateBy},
+            update_time = #{updateTime}
+        where id = #{id}
+          and status in ('0', '1')
+    </update>
+
+    <!--
+        体检登记完成后回写预约状态：同学生 + 同批次 + 当前是「已预约(1)」→「已完成(4)」。
+        只动状态 1，避免把待审核/已取消的脏数据一起改掉。
+    -->
+    <update id="finishByStudentAndBatch">
+        update ch_appointment
+        set status = '4', update_time = now()
+        where student_id = #{studentId}
+          and batch_id = #{batchId}
+          and status = '1'
+    </update>
+
+    <!-- 已取消的记录重新预约：整行显式赋值，避免动态 SQL 漏掉字段导致旧审核信息残留 -->
+    <update id="reappointAppointment" parameterType="Appointment">
+        update ch_appointment
+        set status           = '0',
+            appointment_time = #{appointmentTime},
+            audit_user       = null,
+            audit_time       = null,
+            audit_remark     = '',
+            update_time      = #{appointmentTime}
+        where id = #{id}
+    </update>
+
+    <delete id="deleteAppointmentByIds" parameterType="String">
+        delete from ch_appointment where id in 
+        <foreach item="id" collection="array" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </delete>
+</mapper>

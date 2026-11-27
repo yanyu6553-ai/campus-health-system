@@ -1,0 +1,35 @@
+# 依赖
+node_modules/
+.pnpm-store/
+
+# 构建产物
+target/
+dist/
+build/
+*.class
+*.jar
+*.war
+
+# 日志
+*.log
+logs/
+
+# IDE
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+.settings/
+.project
+.classpath
+
+# 系统
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# 临时
+*.tmp
+*.bak
+~$*

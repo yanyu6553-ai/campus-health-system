@@ -1,0 +1,3 @@
+menu_id	menu_name	path	component	parent_id
+2066	我的体检预约	appointment	health/my/appointment	2065
+2069	我的AI报告	ai	health/my/ai	2065

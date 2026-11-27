@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.health.mapper.DashboardMapper">
+
+    <select id="countStudents" resultType="int">
+        select count(*) from ch_student where status = '0'
+    </select>
+
+    <!-- 只算已提交的体检记录，暂存(record_status = '1')不算「已完成体检」 -->
+    <select id="countExaminedStudents" resultType="int">
+        select count(distinct student_id) from ch_exam_record
+        where ifnull(record_status, '2') &lt;&gt; '1'
+    </select>
+
+    <select id="countAppointmentsByStatus" resultType="int">
+        select count(*) from ch_appointment where status = #{status}
+    </select>
+
+    <!--
+        异常口径：BMI 达到超重(2)/肥胖(3)，或血压达到高血压临界值（收缩压>=140 或 舒张压>=90）。
+        注意这里只做「指标层面」的标记，不等于医学诊断。
+    -->
+    <!--
+        今日预约人数：按"预约时间"落在今天算，排除已取消(3)/已拒绝(2)。
+        用 appointment_time 而不是 create_time：补录的历史预约也能算进它对应的那天。
+    -->
+    <select id="countTodayAppointments" resultType="int">
+        select count(*) from ch_appointment
+        where date(appointment_time) = curdate()
+          and status not in ('2', '3')
+    </select>
+
+    <select id="countAbnormalStudents" resultType="int">
+        select count(distinct student_id)
+        from ch_exam_record
+        where ifnull(record_status, '2') &lt;&gt; '1'
+          and (bmi_level in ('2', '3')
+               or systolic_pressure &gt;= 140
+               or diastolic_pressure &gt;= 90)
+    </select>
+
+    <!-- 与 countExaminedStudents / countAbnormalStudents 同口径：暂存(record_status='1')不算在内 -->
+    <select id="selectBmiDistribution" resultType="java.util.HashMap">
+        select ifnull(bmi_level, '9') as bmiLevel, count(*) as num
+        from ch_exam_record
+        where ifnull(record_status, '2') &lt;&gt; '1'
+        group by bmi_level
+        order by bmi_level
+    </select>
+
+    <!--
+        各体检项目的异常人数（按学生去重）。
+        口径与 ch_exam_item 的默认参考范围一致：
+          血压：收缩压 >= 140 或 舒张压 >= 90
+          BMI ：bmi_level 为超重(2) / 肥胖(3)
+          视力：任一眼 < 4.8
+          心率：< 60 或 > 100
+        只统计已提交的记录，暂存(record_status = '1')不算在内。
+    -->
+    <select id="selectItemAbnormalDistribution" resultType="java.util.HashMap">
+        select '血压' as item, count(distinct student_id) as num
+        from ch_exam_record
+        where ifnull(record_status, '2') &lt;&gt; '1'
+          and (systolic_pressure &gt;= 140 or diastolic_pressure &gt;= 90)
+        union all
+        select 'BMI', count(distinct student_id)
+        from ch_exam_record
+        where ifnull(record_status, '2') &lt;&gt; '1'
+          and bmi_level in ('2', '3')
+        union all
+        select '视力', count(distinct student_id)
+        from ch_exam_record
+        where ifnull(record_status, '2') &lt;&gt; '1'
+          and (vision_left &lt; 4.8 or vision_right &lt; 4.8)
+        union all
+        select '心率', count(distinct student_id)
+        from ch_exam_record
+        where ifnull(record_status, '2') &lt;&gt; '1'
+          and (heart_rate &lt; 60 or heart_rate &gt; 100)
+    </select>
+
+    <select id="selectBatchProgress" resultType="java.util.HashMap">
+        select id            as batchId,
+               batch_name    as batchName,
+               capacity      as capacity,
+               booked_count  as bookedCount,
+               status        as status
+        from ch_exam_batch
+        order by exam_date, id
+    </select>
+
+    <select id="selectRecentAppointments" resultType="java.util.HashMap">
+        select a.id                             as id,
+               s.student_no                     as studentNo,
+               s.student_name                   as studentName,
+               b.batch_name                     as batchName,
+               date_format(a.appointment_time, '%Y-%m-%d %H:%i:%s') as appointmentTime,
+               a.status                         as status
+        from ch_appointment a
+        left join ch_student s on s.id = a.student_id
+        left join ch_exam_batch b on b.id = a.batch_id
+        order by a.id desc
+        limit 6
+    </select>
+
+</mapper>

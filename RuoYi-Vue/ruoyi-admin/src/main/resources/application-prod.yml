@@ -1,0 +1,22 @@
+# 生产环境配置（Docker 部署，SPRING_PROFILES_ACTIVE=druid,prod 激活，覆盖 druid/默认配置）
+ruoyi:
+  # 文件上传路径（容器内路径，compose 挂载 ./uploadPath 持久化）
+  profile: /home/ruoyi/uploadPath
+
+spring:
+  datasource:
+    druid:
+      master:
+        # mysql 为 compose 服务名，容器间走内部网络
+        url: jdbc:mysql://mysql:3306/campus_health?useUnicode=true&characterEncoding=utf8&zeroDateTimeBehavior=convertToNull&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=GMT%2B8
+        username: root
+        password: 123456
+  data:
+    redis:
+      host: redis
+      port: 6379
+
+logging:
+  level:
+    com.ruoyi: info
+    org.springframework: warn
